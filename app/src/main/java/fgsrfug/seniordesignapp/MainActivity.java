@@ -40,8 +40,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     //Define variables to be used in communication
     private EditText ipAddress;
     String ipAddressText;
-    private TextView serverResponse;
+    public TextView serverResponse;
     ImageView image;
+    private String reply;
     Button button;
     String clientMessage = "This is the Client";
     Socket socket = null;
@@ -60,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Log.d("mybug", "in onCreate");
         //Link up the button and textview to the XML file
         //checkPermission();
         button = (Button) findViewById(R.id.nutButton);
@@ -68,12 +70,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //set the button to listen to clicks
         button.setOnClickListener(this);
+        serverResponse.setText("Reply from Pi:");
         if(file.exists()) {
             Log.d("mybug", "file exists");
             Bitmap myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
             image = (ImageView) findViewById(R.id.mainImage);
             image.setImageBitmap(myBitmap);
         }
+        Log.d("mybug", "done with onCreate");
         //path = getBaseContext().getFilesDir().getAbsolutePath();
         //file = new File(path);
         //Uri uri = Uri.fromFile(file);
@@ -97,13 +101,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //Pop up a toast indicating the button has been hit and that a message was sent
             //ipAddressText = ipAddress.getText().toString();
             ipAddressText = "192.168.1.106";
-            Log.d("mybug","toast coming");
+            Log.d("mybug","button pressed/toast coming");
             Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
 
             sendMessage(clientMessage);
             Log.d("mybug","sendMessage called");
-
-
     }
 
     public static void checkPermission(Activity activity){
@@ -123,22 +125,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //Create handler to handle message and runnable objects within this class
         //Create a new thread to handle the socket connection
-        Thread thread = new Thread(new Runnable() {
+        final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     Log.d("mybug","at top of sendMessage's run()");
-                    if(socket == null && ipAddressText != "") {
+                    if(socket == null) {
                         //Create the socket and set it to only look for the raspberry pi
                         Log.d("mybug","creating socket");
-                        socket = new Socket(ipAddressText, 9090);
+                        socket = new Socket("192.168.1.106", 9090);
                         Log.d("mybug","socket created");
                     }
-
+                    /*
                     else {
                         Log.d("mybug", "no socket created");
                         Toast.makeText(getApplicationContext(), "No host found", Toast.LENGTH_LONG).show();
                     }
+                    */
                     boolean socketConnect = socket.isConnected();
                     String stringSockConn = String.valueOf(socketConnect);
                     Log.d("mybug", stringSockConn);
@@ -154,16 +157,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                     Log.d("mybug","message has been sent");
-                    recieveMessage();
-                    Log.d("mybug","recieveMessage() called");
+                    reply = recieveMessage();
+                    Log.d("mybug", "reply is" + reply);
+                    //Log.d("mybug","recieveMessage() called");
 
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            serverResponse.setText("Response from Pi " + reply);
+                            Log.d("mybug", "set serverResponse");
+                        }
+                    });
 
-                    output.close();
-                    out.close();
-                    socket.close();
+                    if(reply.equals("close")) {
+                        output.close();
+                        out.close();
+                        socket.close();
+                    }
                     Log.d("mybug","stuff closed");
                     Log.d("mybug","end of try block");
-
                 }
                 catch (IOException e){
                     e.printStackTrace();
@@ -176,9 +188,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //Log.d("mybug","thread stopped");
     }
 
-    public void recieveMessage(){
+    private String recieveMessage(){
         try {
-            final Handler handler = new Handler();
+            //final Handler handler = new Handler();
             Log.d("mybug", "Inside recieveMessage");
 
             //Create a buffer to receive incoming data and read that data into a string
@@ -190,20 +202,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //handler.post(new Runnable() {
             //    @Override
             //    public void run() {
-            Log.d("mybug", "in the handler");
+            //Log.d("mybug", "in the handler");
+            Log.d("mybug", stringy);
                     //String reply = serverResponse.getText().toString();
                     //if (stringy.trim().length() != 0)
-            serverResponse.setText("\nFrom Server : " + stringy);
+            //serverResponse.setText("\nFrom Server : " + stringy);
             Log.d("mybug", "handler done");
             //    }
             //});
 
         }
-
         catch (IOException e){
             e.printStackTrace();
         }
 
-        //return stringy;
+        return stringy;
     }
 }
