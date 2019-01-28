@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
@@ -21,8 +22,10 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -41,8 +44,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private EditText ipAddress;
     String ipAddressText;
     public TextView serverResponse;
-    ImageView image;
+    public ImageView image;
     private String reply;
+    private Boolean expectingImage;
+    private Bitmap bitmapImage;
     Button button;
     String clientMessage = "This is the Client";
     Socket socket = null;
@@ -67,16 +72,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         button = (Button) findViewById(R.id.nutButton);
         serverResponse = (TextView) findViewById(R.id.serverResponsetextView);
         ipAddress = (EditText) findViewById(R.id.ipAddressInput);
-
+        image = (ImageView) findViewById(R.id.mainImage);
+        image.setImageResource(R.drawable.crabknife);
         //set the button to listen to clicks
         button.setOnClickListener(this);
         serverResponse.setText("Reply from Pi:");
-        if(file.exists()) {
-            Log.d("mybug", "file exists");
-            Bitmap myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
-            image = (ImageView) findViewById(R.id.mainImage);
-            image.setImageBitmap(myBitmap);
+        expectingImage = Boolean.TRUE;
+        //Log.d("mybug", "file exists");
+        //Bitmap myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+        /*
+        try {
+            InputStream is = (InputStream) new URL("https://vignette.wikia.nocookie.net/viceroy/images/0/00/Tumblr_inline_o4xzqu4WC61t634at_540.jpg/revision/latest?cb=20160421235423").getContent();
+            Drawable draw = Drawable.createFromStream(is, null);
+            image.setImageDrawable(draw);
         }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        */
+
         Log.d("mybug", "done with onCreate");
         //path = getBaseContext().getFilesDir().getAbsolutePath();
         //file = new File(path);
@@ -104,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.d("mybug","button pressed/toast coming");
             Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
 
-            sendMessage(clientMessage);
+            sendMessage(clientMessage, expectingImage);
             Log.d("mybug","sendMessage called");
     }
 
@@ -121,9 +135,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    private void sendMessage(final String message){
-
-        //Create handler to handle message and runnable objects within this class
+    private void sendMessage(final String message, final Boolean expectingImage){
         //Create a new thread to handle the socket connection
         final Thread thread = new Thread(new Runnable() {
             @Override
@@ -142,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Toast.makeText(getApplicationContext(), "No host found", Toast.LENGTH_LONG).show();
                     }
                     */
+                    //Check that the socket is connected.
                     boolean socketConnect = socket.isConnected();
                     String stringSockConn = String.valueOf(socketConnect);
                     Log.d("mybug", stringSockConn);
@@ -155,20 +168,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     output.println(message);
                     output.flush();
 
-
+                    //Assign reply to return value of recieveMessage
                     Log.d("mybug","message has been sent");
-                    reply = recieveMessage();
-                    Log.d("mybug", "reply is" + reply);
-                    //Log.d("mybug","recieveMessage() called");
+                    if(expectingImage == Boolean.TRUE) {
+                        Log.d("mybug", "calling recieveImage");
+                        recieveImage();
+                    }
+                    else {
+                        reply = recieveMessage();
+                        Log.d("mybug", "reply is" + reply);
+                    }
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            serverResponse.setText("Response from Pi " + reply);
-                            Log.d("mybug", "set serverResponse");
-                        }
-                    });
+                    handleMessage(expectingImage, reply, bitmapImage);
 
+                    //Close socket if server sends close
                     if(reply.equals("close")) {
                         output.close();
                         out.close();
@@ -184,38 +197,74 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
         thread.start();
         Log.d("mybug","thread started");
-        //thread.stop();
-        //Log.d("mybug","thread stopped");
     }
+
+    private void handleMessage(Boolean expectingImage, final String reply, final Bitmap bitmapImage){
+        Log.d("mybug", "top of handleMessage");
+        if (expectingImage == Boolean.FALSE){
+            Log.d("mybug", "handling string");
+            //Call UIThread to change viewText on main screen
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    serverResponse.setText("Response from Pi " + reply);
+                    Log.d("mybug", "set serverResponse");
+                }
+            });
+        }
+
+        else {
+            Log.d("mybug", "handling image");
+            //runOnUiThread(new Runnable() {
+                //@Override
+                //public void run() {
+            Log.d("mybug", "about to set image");
+            //image.setImageBitmap(bitmapImage);
+            onPostExecute(bitmapImage);
+            Log.d("mybug", "image handled");
+                //}
+            //});
+
+        }
+
+    }
+
+    private void onPostExecute(Bitmap bitmapImage) {
+        image.setImageBitmap(bitmapImage);
+    }
+
 
     private String recieveMessage(){
         try {
-            //final Handler handler = new Handler();
             Log.d("mybug", "Inside recieveMessage");
 
             //Create a buffer to receive incoming data and read that data into a string
             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             stringy = input.readLine();
-
-            Log.d("mybug", "created input variables");
-            //Handle the response we get from the server and print it to the screen
-            //handler.post(new Runnable() {
-            //    @Override
-            //    public void run() {
-            //Log.d("mybug", "in the handler");
-            Log.d("mybug", stringy);
-                    //String reply = serverResponse.getText().toString();
-                    //if (stringy.trim().length() != 0)
-            //serverResponse.setText("\nFrom Server : " + stringy);
-            Log.d("mybug", "handler done");
-            //    }
-            //});
-
+            Log.d("mybug", "created input variables/reply is" + stringy);
         }
         catch (IOException e){
             e.printStackTrace();
         }
 
         return stringy;
+    }
+
+    private void recieveImage() {
+        try {
+            Log.d("mybug", "inside recieveImage");
+            DataInputStream imageInputStream = new DataInputStream(socket.getInputStream());
+            int bytesRead;
+            byte[] recievedImage = new byte[1280 * 720];
+            bytesRead = imageInputStream.read(recievedImage, 0, recievedImage.length);
+            bitmapImage = BitmapFactory.decodeByteArray(recievedImage, 0, bytesRead);
+
+            if (bitmapImage != null){
+                Log.d("mybug", "BITMAP ISN'T EMPTY");
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 }
