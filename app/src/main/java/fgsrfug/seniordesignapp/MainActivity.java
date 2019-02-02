@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         serverResponse = (TextView) findViewById(R.id.serverResponsetextView);
         ipAddress = (EditText) findViewById(R.id.ipAddressInput);
         image = (ImageView) findViewById(R.id.mainImage);
-        image.setImageResource(R.drawable.crabknife);
+        image.setImageResource(R.drawable.squiddab);
         //set the button to listen to clicks
         button.setOnClickListener(this);
         serverResponse.setText("Reply from Pi:");
@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             //Pop up a toast indicating the button has been hit and that a message was sent
             //ipAddressText = ipAddress.getText().toString();
-            ipAddressText = "192.168.1.106";
+            ipAddressText = "192.168.0.55";
             Log.d("mybug","button pressed/toast coming");
             Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
 
@@ -145,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if(socket == null) {
                         //Create the socket and set it to only look for the raspberry pi
                         Log.d("mybug","creating socket");
-                        socket = new Socket("192.168.1.106", 9090);
+                        socket = new Socket(ipAddressText, 9090);
                         Log.d("mybug","socket created");
                     }
                     /*
@@ -177,16 +177,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     else {
                         reply = recieveMessage();
                         Log.d("mybug", "reply is" + reply);
+                        //Close socket if server sends close
+                        if(reply.equals("close")) {
+                            output.close();
+                            out.close();
+                            socket.close();
+                        }
                     }
 
                     handleMessage(expectingImage, reply, bitmapImage);
 
-                    //Close socket if server sends close
-                    if(reply.equals("close")) {
-                        output.close();
-                        out.close();
-                        socket.close();
-                    }
                     Log.d("mybug","stuff closed");
                     Log.d("mybug","end of try block");
                 }
@@ -229,8 +229,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    private void onPostExecute(Bitmap bitmapImage) {
-        image.setImageBitmap(bitmapImage);
+    private void onPostExecute(final Bitmap bitmapImage) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                image.setImageBitmap(bitmapImage);
+            }
+        });
     }
 
 
