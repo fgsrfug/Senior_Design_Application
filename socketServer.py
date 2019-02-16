@@ -7,10 +7,13 @@ import time
 host = ''
 port = 9090
 
+image = 'chungus.png'
+    
 #Debugging print statement and message to be sent to the client
 print("Beginning socket communication")
 message = "giddy-up\n"
 #while True:
+
 #Create the socket to be a standart TCPstream called serverSocket
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
     
@@ -29,6 +32,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
         #Tell the user that we have been connected to 
         print('Connected by', addr)
         
+
         #While we're connected, wait for data to come in
         while True:
             print('in while true')
@@ -44,8 +48,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
             #Print the data to the terminal
             print(repr(data))
             
+            myfile = open(image, 'rb')
+            fileBytes = myfile.read()
+            numBytes = len(fileBytes)
+            print(numBytes)
+            
+            conn.sendall(fileBytes)
+
             #Send our message out to the client
-            conn.sendto(message.encode(),(host,port))
+            #conn.sendto(message.encode(),(host,port))
             #conn.sendall(data)
 
       #  conn.close()
