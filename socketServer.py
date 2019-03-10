@@ -112,8 +112,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
                 #Call close socket
                 closeSocket()
 
-            
-
             #print('below data recv')
             
             #Print the data to the terminal
