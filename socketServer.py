@@ -115,7 +115,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
             #print('below data recv')
             
             #Print the data to the terminal
-            
             #Send our message out to the client
             #conn.sendto(message.encode(),(host,port))
             #conn.sendall(data)
