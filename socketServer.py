@@ -4,6 +4,10 @@ import socket
 import time
 import subprocess
 
+#global variables
+message = "giddy-up\n"
+cMessage = ""
+
 #image = 'chungus.jpg'
 
 #-----------------------------------------------------------------------
@@ -33,7 +37,7 @@ def sendImage():
 #-----------------------------------------------------------------------
 #Function to send strings to the client
 #This probably doesn't need to be function, but I'm doing this because Spencer
-#will give me shit if I dont "mOdUlErIzE mY pRoGrAmS"
+#will give me a hard time if I dont "mOdUlArIzE mY fUnCtIoNs"
 def sendString(str):
     #Call sendall to forward the string
     conn.sendall(str)
@@ -48,18 +52,26 @@ def closeSocket():
     print("closing socket")
 #-----------------------------------------------------------------------
 
+#-----------------------------------------------------------------------
+#Function to get stdout of image_process.py and store result as a string
+def getImageOutputs():
+    #Call imageProcess.py and get it's output
+    output = subprocess.check_output("./image_process.py", shell=True)
+    #Convert the output from byte to string
+    output = output.decode("utf-8")
+    #Split the string after the 9th space (FOR THIS EXAMPLE ONLY)
+    output = output.split(" ")[9]
+    #Replace newlines with commas
+    output = output.replace('\n',', ', 3)
+    print(output)
+#-----------------------------------------------------------------------
+
 #Create variables for host and port. Leave host blank so as to listen listen for connections on port 9090
 host = ''
 port = 9090
 
 #Debugging print statement and message to be sent to the client
 print("Beginning socket communication")
-message = "giddy-up\n"
-cMessage = ""
-sNumBytes = ""
-#while True:
-
-subprocess.call("./laserControl.py", shell=True) 
 
 #Create the socket to be a standart TCPstream called serverSocket
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
@@ -83,20 +95,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
 
         #While we're connected, wait for data to come in
         while True:
-            print('top of while loop')
-            print(data)
+            print('Beginning action!')
+            #Recieve our message from the client
             cMessage = conn.recv(1024)
             
             #Print the client message for testing purposes
             print("Message from server: " + repr(cMessage))
             
+            #Check the client message to determine next action
+            
             #If cMessage is empty, close the socket
             if not cMessage:
                 closeSocket()
                 break
-            
-            #Check the client message to determine next action
-            if (cMessage == "This is the Client"):
+
+            #Check for first message to initiate analysis
+            elif (cMessage == "This is the Client"):
                 #Call laserControl to turn on laser
                 subprocess.call("./laserControl.py", shell=True) 
                 print('calling laserControl.py and camera.sh')
@@ -105,19 +119,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
                 #Wait 5 seconds before sending data to the client so they have
                 #time to look at the pretty colors that is the image
                 time.sleep(5)
+           
+           #Once the client has recieved the image, client sends ACK for us to
+           #send the image outputs
+            elif(cMessage == "Got image"):
                 #Send supporting data to accompany the image
-                sendString(str)
-            
-            if (cMessage == "close"):
+                sendString(str = getImageOutputs)
+
+            #Once the client is done, check if they want to close the socket
+            elif (cMessage == "close"):
                 #Call close socket
                 closeSocket()
 
-            #print('below data recv')
-            
-            #Print the data to the terminal
-            #Send our message out to the client
-            #conn.sendto(message.encode(),(host,port))
-            #conn.sendall(data)
-        
-      #  time.sleep(60)
-      #  print("slept for 60 seconds")
