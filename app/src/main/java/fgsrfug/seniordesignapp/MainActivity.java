@@ -256,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
 
         //Check if we're expecting an image
         if (handleMessage(expectingImage, reply, bitmapImage)){
-            //If so, send 
+            //If so, send
             sendMessage(reply);
         }
         else{
