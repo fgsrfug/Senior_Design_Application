@@ -96,12 +96,11 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //Pop up a toast indicating the button has been hit and that a message was sent
                 //ipAddressText = ipAddress.getText().toString();
-                ipAddressText = "192.168.1.178";
+                ipAddressText = "192.168.122.1";
                 Log.d("mybug","button pressed/toast coming");
                 Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
-
-                sendMessage(clientMessage);
-                Log.d("mybug","sendMessage called");
+                Log.d("mybug","going into main()");
+                main();
             }
 
         });
@@ -179,51 +178,106 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void sendMessage(final String message) {
-        Log.d("mybug", "top of sendMessage");
-        //Create a new thread to handle the socket connection
+    private void main() {
         final Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Log.d("mybug", "at top of sendMessage's run()");
-                    if (socket == null) {
-                        //Create the socket and set it to only look for the raspberry pi
-                        Log.d("mybug", "creating socket");
-                        socket = new Socket(ipAddressText, 9090);
-                        Log.d("mybug", "socket created");
-                    }
-                    /*
-                    else {
-                        Log.d("mybug", "no socket created");
-                        Toast.makeText(getApplicationContext(), "No host found", Toast.LENGTH_LONG).show();
-                    }
-                    */
+                    String serverMessage = "";
+                    int messageCounter = 1;
+                    while (true) {
+                        Log.d("mybug", "Top of main while loop");
+                        if (socket == null) {
+                            //Create the socket and set it to only look for the raspberry pi
+                            // Log.d("mybug", "creating socket");
+                            socket = new Socket(ipAddressText, 9090);
+                            Log.d("mybug", "socket created");
+                        }
 
-                    //Check that the socket is connected.
-                    boolean socketConnect = socket.isConnected();
-                    String stringSockConn = String.valueOf(socketConnect);
-                    Log.d("mybug", stringSockConn);
+                        Log.d("mybug", "Server message is: " + serverMessage);
 
-                    //Assign out to be the output stream and assign output to out so as to print in
-                    //a text outputstream
-                    OutputStream out = socket.getOutputStream();
-                    PrintWriter output = new PrintWriter(out);
-                    Log.d("mybug", "about to send message");
-                    //Push out the message and flush it to ensure it was sent
-                    output.println(message);
-                    Log.d("mybug", "gonna flush!");
-                    output.flush();
-                    Log.d("mybug", "message sent");
-                    determineMessage();
+                        switch (stringSearch(serverMessage, messageCounter)) {
+                            case 0:
+                                Log.d("mybug", "No ACK");
+                                sendMessage("No ACK");
+                                messageCounter = 1;
+                                serverMessage = recieveMessage();
+                                break;
+                            case 1:
+                                Log.d("mybug", "This is the Client");
+                                sendMessage(clientMessage);
+                                messageCounter = 1;
+                                serverMessage = recieveMessage();
+                                break;
+                            case 2:
+                                Log.d("mybug", "camera exposure");
+                                sendMessage(Integer.toString(cameraExposure));
+                                messageCounter = 2;
+                                serverMessage = recieveMessage();
+                                break;
+                            case 3:
+                                Log.d("mybug", "laser intensity");
+                                sendMessage(Integer.toString(laserIntensity));
+                                messageCounter = 3;
+                                serverMessage = recieveMessage();
+                                break;
+                            case 4:
+                                Log.d("mybug", "image size");
+                                sendMessage("Send image size");
+                                serverMessage = recieveMessage();
+                                break;
+                            case 5:
+                                Log.d("mybug", "receiving image");
+                                recieveImage();
+                                break;
+                        }
+                    }
+
+
                 }
+
                 catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         });
         thread.start();
-        Log.d("mybug", "bottom of sendMessage");
+    }
+
+
+    private void sendMessage(final String message) {
+        Log.d("mybug", "top of sendMessage");
+        //Create a new thread to handle the socket connection
+            try {
+                Log.d("mybug", "at top of sendMessage's run()");
+
+                /*
+                else {
+                        Log.d("mybug", "no socket created");
+                        Toast.makeText(getApplicationContext(), "No host found", Toast.LENGTH_LONG).show();
+                }
+                */
+
+                //Check that the socket is connected.
+                boolean socketConnect = socket.isConnected();
+                String stringSockConn = String.valueOf(socketConnect);
+                Log.d("mybug", stringSockConn);
+
+                //Assign out to be the output stream and assign output to out so as to print in
+                //a text outputstream
+                OutputStream out = socket.getOutputStream();
+                PrintWriter output = new PrintWriter(out);
+                Log.d("mybug", "about to send message");
+                //Push out the message and flush it to ensure it was sent
+                output.println(message);
+                Log.d("mybug", "gonna flush!");
+                output.flush();
+                Log.d("mybug", "message sent");
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+            Log.d("mybug", "bottom of sendMessage");
     }
 
     //Close the socket
@@ -232,32 +286,79 @@ public class MainActivity extends AppCompatActivity {
             out.close();
             out.close();
             socket.close();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void determineMessage(){
+    private int stringSearch(final String stringToCheck, int messageCount){
+        Log.d("mybug", "top of stringSearch");
+        switch (stringToCheck){
+            case "":
+                //Sending "this is the client"
+                Log.d("mybug", "empty string case");
+                return 1;
+
+            case "Message received":
+                //ACK to this is the client
+                Log.d("mybug", "MessageCount" + Integer.toString(messageCount));
+                Log.d("mybug", "Message received case");
+                if (messageCount == 1) {
+                    Log.d("mybug", "first message received");
+                    return 2;
+                }
+                //ACK to first camera exposure data
+                else if(messageCount == 2){
+                    Log.d("mybug", "second message received");
+                    return 3;
+                }
+                //ACK to laser intensity
+                else if(messageCount == 3){
+                    Log.d("mybug", "third message received");
+                    return 4;
+                }
+            case "close":
+                try {
+                    closeSocket(socket.getOutputStream());
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            default:
+                break;
+        }
+
+        if (stringToCheck.contains("Image size")){
+            expectingImage = Boolean.TRUE;
+            return 5;
+        }
+        return 0;
+    }
+/*
+    private void determineMessage(OutputStream out){
         //String imageSize = recieveMessage();
         //Log.d("mybug","imageSize value" + imageSize);
-
-        Log.d("mybug", "message has been sent");
+        Log.d("mybug", "message has been sent, inside determineMessage");
         if (expectingImage == Boolean.TRUE) {
             Log.d("mybug", "calling recieveImage");
             recieveImage();
         }
-
         //Assign reply to return value of recieveMessage
         else {
             reply = recieveMessage();
-            Log.d("mybug", "reply is" + reply);
+            Log.d("mybug", "reply is: " + reply);
             //Close socket if server sends close
+            if(reply.equals("'close'")){
+                Log.d("mybug", "about to close socket");
+                closeSocket(out);
+            }
         }
 
         //Check if we're expecting an image
         if (handleMessage(expectingImage, reply, bitmapImage)){
             //If so, send
-            sendMessage(reply);
+            sendMessage("Message recieved");
         }
         else{
             recieveImage();
@@ -267,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d("mybug", "end of try block");
     }
 
-
+    //Handles data recieved and places it on the screen
     private boolean handleMessage(Boolean expectingImage, final String reply, final Bitmap bitmapImage){
         Log.d("mybug", "top of handleMessage");
         if (expectingImage == Boolean.FALSE){
@@ -276,8 +377,8 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    serverResponse.setText("Response from Pi:Image Size is " + Integer.toString(bytesRead));
-                    concentration.setText("Image Concentration: Like, really concentrated");
+                    serverResponse.setText("Response from Pi: " + reply);
+                    concentration.setText("Image Concentration: super " + reply );
                     Log.d("mybug", "set serverResponse");
                 }
             });
@@ -304,7 +405,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
+*/
     private void onPostExecute(final Bitmap bitmapImage) {
         runOnUiThread(new Runnable() {
             @Override
@@ -323,7 +424,7 @@ public class MainActivity extends AppCompatActivity {
             //Create a buffer to receive incoming data and read that data into a string
             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             stringy = input.readLine();
-            Log.d("mybug", "created input variables/reply is" + stringy);
+            Log.d("mybug", "created input variables/reply is: " + stringy);
         }
         catch (IOException e){
             e.printStackTrace();
