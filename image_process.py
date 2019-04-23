@@ -1,3 +1,5 @@
+#!/usr/bin/env python2.7
+
 import numpy as np
 import cv2
 import array as arr
@@ -8,9 +10,9 @@ img = cv2.imread('Test.jpg')
 red_img = cv2.imread('Test.jpg')
 green_img = cv2.imread('Test.jpg')
 blue_img = cv2.imread('Test.jpg')
-img1 = cv2.imread('Test1.png')
-img2 = cv2.imread('Test2.png')
-img3 = cv2.imread('Test3.png')
+img1 = cv2.imread('Test.jpg')
+img2 = cv2.imread('Test.jpg')
+img3 = cv2.imread('Test.jpg')
 
 #transfer function for level 1
 def function1(x):
@@ -49,13 +51,13 @@ def rgbPic(x):
             green_pix[0] = 0 
             green_pix[2] = 0
 
-    showpic(red_img)
-    showpic(blue_img)
-    showpic(green_img)
+#    showpic(red_img)
+#    showpic(blue_img)
+#    showpic(green_img)
 
 #averages out green pixel, checks threshold for level, prints concentrations
 def averageGreen(x, level): 
-    showpic(x)
+#    showpic(x)
     testimg = x
     width = np.size(x, 1)-1
     height = np.size(x, 0)-1
@@ -65,13 +67,14 @@ def averageGreen(x, level):
     for x in range(0,height):
         for y in range(0,width):
             pixel = testimg[x,y]
-            if pixel[1] > 35 and pixel[1] > pixel[2] and pixel[1] > pixel[0]: #green values that will matter
-            	total = total + pixel[1]#total up green count
+            if pixel[1] > 0: #and pixel[1] > pixel[2] and pixel[1] > pixel[0]: #green values that will matter
+                #total up green count
+                total = total + pixel[1]
                 greenPix = greenPix + 1
                 break
     average = total/(greenPix)
     if average > threshold[level][0] and average < threshold[level][1]:#check if in threshold
-	print 'The average green pixel value of ' + str(average) + ' is with in level ' + str(level+1) + ' pixel value range of: ' + str(threshold[level][0]) + '-' +str(threshold[level][1])
+        print "in range %d\n%d\n%d\n%d" % (average, level+1, threshold[level][0], threshold[level][1])
         #find concentration
         if(level == 0):
     	    y = function1(average)
@@ -79,12 +82,13 @@ def averageGreen(x, level):
     	    y = function2(average)
         elif(level == 2):
     	    y = function3(average)
-        print 'The concentration is ' + str(y) + '%'
+        print "concentration %s\n" % y
     else: #not in range
-	print 'The average green pixel value of ' + str(average) + ' is not within level ' + str(level+1) + ' pixel value range of: ' + str(threshold[level][0]) + '-' +str(threshold[level][1])
+        print "not in range %d\n%d\n%d\n%d" % (average, level+1, threshold[level][0], threshold[level][1])
+	#print (str(average))
 
 #function calls 
-showpic(img)
+#showpic(img)
 rgbPic(img)
 averageGreen(img1, 0)
 averageGreen(img2, 1)

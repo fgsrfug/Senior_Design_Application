@@ -4,44 +4,51 @@ import socket
 import time
 import subprocess
 
-#global variables
-message = "giddy-up\n"
+#Remeber to keep newline!
+messageReceived = "Message received\n"
 cMessage = ""
 
-#image = 'chungus.jpg'
+image = 'chungus.jpg'
 
 #-----------------------------------------------------------------------
 #Function used to send the image
-def sendImage():
+def sendImage(imageBytes):
+    print("in sendImage")
+    #While there are still bytes to send
+    #while (imageBytes != 0):
+    print("Within sendImage while loop")
+    #Send the bytes
+    conn.sendall(imageBytes)
+    
+    print("Sent file")
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+def createImageObject():
     #Create object to hold image
     sampleImage = 'test_images/chungus.jpg'
     #open the image for reading
     readImage = open(sampleImage, 'rb')
     #Get the image bytes
     imageBytes = readImage.read()
+    
+    return imageBytes
+#-----------------------------------------------------------------------
+
+#-----------------------------------------------------------------------
+#Function used to determine image size and send it to the server
+def sendImageSize (imageBytes):
+    print("About to send image size")
     #Get the number of bytes
     numBytes = len(imageBytes)
     #Create string to print out numBytes
-    sNumBytes = "%d" % numBytes
-    print(numBytes)
-    print(sNumBytes)
+    sNumBytes = "%d\n" % numBytes
+    print("Sending image of size " + sNumBytes)
+    #print(sNumBytes)
     #Send the number of bytes to expect
-    conn.sendall(sNumBytes.encode())
-    confirmation = ''
-    while (confirmation != "ACK"): 
-        confirmation = conn.recv(1024)
-        confirmation = confirmation.decode("utf-8") 
-        confirmation = confirmation.replace('\n','')
-
-    #While there are still bytes to send
-    while (imageBytes != 0):
-        #Send the bytes
-        confirmation = conn.sendall(imageBytes)
-        if confirmation != None:
-            pass
-            # Bad stuff happend
-        imageBytes = readImage.read()
-        print("Sent file")
+    sizeMessage = "Image size "
+    sizeMessage += sNumBytes 
+    conn.sendall(sizeMessage.encode())
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
@@ -50,7 +57,7 @@ def sendImage():
 #will give me a hard time if I dont "mOdUlArIzE mY fUnCtIoNs"
 def sendString(str):
     #Call sendall to forward the string
-    conn.sendall(str)
+    conn.sendall(str.encode())
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
@@ -119,19 +126,42 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
             if not cMessage:
                 closeSocket()
                 break
+            
+            elif (cMessage == "This is the Client"):
+                print("Matched with this is the client")
+                sendString(messageReceived)
+
+            elif ("Laser intensity" in cMessage):
+                print("Matched with laser intensity")
+                sendString(messageReceived)
+            
+            elif ("Camera exposure" in cMessage):
+                print("Matched with camera exposure")
+                sendString(messageReceived)
+
+            elif ("Send image size" in cMessage):
+                print("Matched with send image size, taking picture")
+                #Call laserControl to turn on laser
+                #subprocess.call("./laserControl.py", shell=True) 
+                imageBytes = createImageObject() 
+                print('calling laserControl.py and camera.sh')
+                sendImageSize(imageBytes)
 
             #Check for first message to initiate analysis
-            elif (cMessage == "This is the Client"):
+            elif (cMessage == "Ready for image"):
                 print ("Initiating Analysis")
-                #Call laserControl to turn on laser
-                subprocess.call("./laserControl.py", shell=True) 
-                print('calling laserControl.py and camera.sh')
                 #Send the image to the client 
-                sendImage()
+                sendImage(imageBytes)
                 #Wait 5 seconds before sending data to the client so they have
                 #time to look at the pretty colors that is the image
                 print ("going to sleep")
-                time.sleep(5)
+                #time.sleep(5)
+           
+           #Once the client has recieved the image, client sends ACK for us to
+           #send the image outputs
+            elif(cMessage == "Got image"):
+                #Send supporting data to accompany the image
+                sendString(str = getImageOutputs)
            
            #Once the client has recieved the image, client sends ACK for us to
            #send the image outputs
