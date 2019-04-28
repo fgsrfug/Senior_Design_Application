@@ -1,3 +1,5 @@
+#!/usr/bin/env python2.7
+
 import string
 import numpy as np
 import cv2
@@ -6,8 +8,8 @@ threshold = [[95, 200],[25, 172],[75, 210]] #thresholds for each level
 
 
 #take the picture
-def takePicture(x):
-	rapidstill -ex auto -w 640 -h 480 -q 50 -t 10000 -sh 100 -ss 110000 -o /home/pi/piControl/SampleImage.jpg
+#def takePicture(x):
+#	rapidstill -ex auto -w 640 -h 480 -q 50 -t 10000 -sh 100 -ss 110000 -o /home/pi/piControl/SampleImage.jpg
 
 #read in original, RGB, diff intensity
 img = cv2.imread('sampleImage.jpg')
@@ -66,5 +68,5 @@ def averageGreen(x, level):
 
 #function calls
 for x in range(0,3):
-	takePicture(x)
+	#takePicture(x)
 	averageGreen(img, 1)

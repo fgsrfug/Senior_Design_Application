@@ -74,14 +74,16 @@ def closeSocket():
 #Function to get stdout of image_process.py and store result as a string
 def getImageOutputs():
     #Call imageProcess.py and get it's output
-    output = subprocess.check_output("./image_process.py", shell=True)
+    output = subprocess.check_output("./New_Image_Processing.py", shell=True)
     #Convert the output from byte to string
     output = output.decode("utf-8")
     #Split the string after the 9th space (FOR THIS EXAMPLE ONLY)
-    output = output.split(" ")[9]
+    output = output.split("\n")[1]
     #Replace newlines with commas
-    output = output.replace('\n',', ', 3)
-    print(output)
+   # output = output.replace('\n',', ', 3)
+    sOutput = "%s\n" % output
+    print(sOutput)
+    return sOutput
 #-----------------------------------------------------------------------
 
 #Create variables for host and port. Leave host blank so as to listen listen for connections on port 9090
@@ -90,6 +92,7 @@ port = 9090
 
 #Debugging print statement and message to be sent to the client
 print("Beginning socket communication")
+#getImageOutputs()
 
 #Create the socket to be a standart TCPstream called serverSocket
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
@@ -152,23 +155,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
             elif (cMessage == "Ready for image"):
                 print ("Initiating Analysis")
                 #Send the image to the client 
-                sendImage(imageBytes)
+                #sendImage(imageBytes)
                 #Wait 5 seconds before sending data to the client so they have
                 #time to look at the pretty colors that is the image
-                print ("going to sleep")
+                #print ("going to sleep")
                 #time.sleep(5)
            
            #Once the client has recieved the image, client sends ACK for us to
            #send the image outputs
             elif(cMessage == "Got image"):
+                print ("Sending sample concentration")
                 #Send supporting data to accompany the image
-                sendString(str = getImageOutputs)
-           
-           #Once the client has recieved the image, client sends ACK for us to
-           #send the image outputs
-            elif(cMessage == "Got image"):
-                #Send supporting data to accompany the image
-                sendString(str = getImageOutputs)
+                #getImageOutputs()
+                sendString(getImageOutputs())
 
             #Once the client is done, check if they want to close the socket
             elif (cMessage == "close"):
