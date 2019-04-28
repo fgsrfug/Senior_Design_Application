@@ -8,7 +8,7 @@ import subprocess
 messageReceived = "Message received\n"
 cMessage = ""
 
-image = 'chungus.jpg'
+image = 'test_images/luigi.jpg'
 
 #-----------------------------------------------------------------------
 #Function used to send the image
@@ -26,7 +26,7 @@ def sendImage(imageBytes):
 #-----------------------------------------------------------------------
 def createImageObject():
     #Create object to hold image
-    sampleImage = 'test_images/chungus.jpg'
+    sampleImage = image
     #open the image for reading
     readImage = open(sampleImage, 'rb')
     #Get the image bytes
@@ -48,7 +48,8 @@ def sendImageSize (imageBytes):
     #Send the number of bytes to expect
     sizeMessage = "Image size "
     sizeMessage += sNumBytes 
-    conn.sendall(sizeMessage.encode())
+    sendString(sizeMessage)
+    print("Leaving sendImageSize")
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
@@ -118,7 +119,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
             cMessage = cMessage.decode("utf-8") 
             cMessage = cMessage.replace('\n','')
             #Print the client message for testing purposes
-            print("Message from server: " + repr(cMessage))
+            print("Message from client: " + repr(cMessage))
             
             #Check the client message to determine next action
             
