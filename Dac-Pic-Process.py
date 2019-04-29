@@ -10,18 +10,15 @@ dac = Adafruit_MCP4725.MCP4725()
 #Set the voltage
 def setVoltage(x):
 	if x == 0:
-		print 'dac at level ' + str(x)
-		#dac.set_voltage(3195)#set to 3.9V
+		dac.set_voltage(3195)#set to 3.9V
 	elif x == 1:
-		print 'dac at level ' + str(x)
-		#dac.set_voltage(3277)#set to 4.0V
+		dac.set_voltage(3277)#set to 4.0V
 	elif x == 2:	
-		print 'dac at level ' + str(x)
-		#dac.set_voltage(3358)#set to 4.1V
+		dac.set_voltage(3358)#set to 4.1V
 
 #Camera takes picture and saves it in piControl
 def takePic():
-	#raspistill -ex auto -w 640 -h 480 -q 50 -100000 -o /home/pi/piControl/sampleImage.jpg
+	raspistill -ex auto -w 640 -h 480 -q 50 -100000 -o /home/pi/piControl/sampleImage.jpg
 		print 'taking picture' 
 
 #process image based on laser intensity
