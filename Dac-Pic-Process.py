@@ -18,11 +18,11 @@ def setVoltage(x):
 
 #Camera takes picture and saves it in piControl
 def takePic():
-	raspistill -ex auto -w 640 -h 480 -q 50 -100000 -o /home/pi/piControl/sampleImage.jpg
+	raspistill -ex auto -w 3280 -h 2464 -q 50 -100000 -o /home/pi/piControl/sampleImage.jpg
 		print 'taking picture' 
 
 #process image based on laser intensity
-def processImage(x):
+def processImage(z):
 	global concentration
 	global acceptPic
 
@@ -30,21 +30,21 @@ def processImage(x):
 	img = Image.open('sampleImage.jpg')
 	total = 0
 	
-	for x in range(0,400):
-		for y in range(0,400):
+	for x in range(700,2100):
+		for y in range(800,2000):
 			pixel = img.getpixel((x,y))			
 			if pixel[1] > 10 and pixel[1] > pixel[2] and pixel[1] > pixel[0]:
 				total = total + 1
 				break
 	#check if in correct laser range and calculate cam
-	if x == 0 and total < 718 and total > 379:
-		concentration = 2812.4701 - 24.5755*total + 0.077886*total**2 - 0.000105603*total**3 + (5.2190053*10**(-8))*total**4
+	if z == 0 and total < 480 and total > 1018:
+		concentration = 334.945 - 2.58665*total + 0.00706678*total**2 - (7.823577*10**(-6))*total**3 + (3.100589*10**(-9))*total**4 
 		acceptPic = 1
-	elif x == 1 and total > 429 and total < 1171:
-		concentration = -171.1545 + 0.79789*total - 0.001025137*total**2 + (4.628246*10**(-7))*total**3
+	elif z == 1 and total > 425 and total < 1372:
+		concentration = -1082.64 + 7.3584*total - 0.0190526*total**2 + (2.38123*10**(-5))*total**3 - (1.43231*10**(-8))*total**4 + (3.3334*10**(-12))*total**5
 		acceptPic = 1
-	elif x == 2 and total > 367 and total < 417:
-		concentration = con = -5771.4376 + 34.938545*total - (6.57038*10**(-2))*total**2 + (3.63577*10**(-5))*total**3
+	elif z == 2 and total > 421 and total < 1368:
+		concentration = -535.69588 + 2.47444*total - (3.452522*10**(-3))*total**2 + (1.41899*10**(-6))*total**3
 		acceptPic = 1
 	
 
@@ -55,6 +55,11 @@ for x in range(0,3):
 	if(acceptPic == 1):
 		print str(concentration)
 		break
+		
+image = Image.open('sampleImage.jpg')
+image = image.crop((700,800,2100))#crop it to important area
+image = image.resize((175,175))#make it 1.4 Kbytes
+image.save('sampleImage.jpg')#save final image
 
 dac.set_voltage(0)#set to 0V
 		
