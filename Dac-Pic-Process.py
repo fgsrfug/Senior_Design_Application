@@ -1,7 +1,5 @@
 import time
 import string
-import cv2
-import array as arr
 #import Adafruit_MCP4725
 
 acceptPic = 0
