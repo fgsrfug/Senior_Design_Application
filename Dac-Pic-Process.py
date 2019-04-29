@@ -30,8 +30,8 @@ def processImage(x):
 	img = Image.open('sampleImage.jpg')
 	total = 0
 	
-	for x in range(700,2100):
-		for y in range(800,2000):
+	for x in range(0,400):
+		for y in range(0,400):
 			pixel = img.getpixel((x,y))			
 			if pixel[1] > 10 and pixel[1] > pixel[2] and pixel[1] > pixel[0]:
 				total = total + 1
