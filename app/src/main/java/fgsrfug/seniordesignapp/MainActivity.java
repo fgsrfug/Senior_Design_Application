@@ -85,8 +85,8 @@ public class MainActivity extends AppCompatActivity {
         concentration = findViewById(R.id.concentration_value);
         //ipAddress = (EditText) findViewById(R.id.ipAddressInput);
         image = (ImageView) findViewById(R.id.mainImage);
-        image.getLayoutParams().height = 640;
-        image.getLayoutParams().width = 480;
+        image.getLayoutParams().height = 768;
+        image.getLayoutParams().width = 1024;
         image.setImageResource(R.drawable.sampleimage);
         //set the buttons to listen to clicks
         //Set this button to initiate the analysis
@@ -382,42 +382,34 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (expectingImage) {
                 Log.d("mybug", "inside recieveImage");
+                //Bring in inputstream to get data from
                 InputStream imageInputStream = socket.getInputStream();
                 Log.d("mybug", "imageInputStream declared");
-                ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream(imageSize);
+                //create bytes to hold incoming data and total data, respectively
                 byte [] recievedImage = new byte[imageSize];
                 byte [] bitmapArray = new byte[imageSize];
+                //Keep track of how many bytes were read and where we are in the array
                 int bytePosition = 0;
                 int bytesRead = 0;
+                //read from the input stream and put it in recievedImage
                 while ((bytesRead = imageInputStream.read(recievedImage)) != -1) {
-                    if(bytePosition != 0) {
-                        Log.d("mybug", "element at bytePosition before write " + recievedImage[bytePosition - 1]);
-                    }
-                    else {
-                        Log.d("mybug", "element at bytePosition 0 before write " + recievedImage[0]);
-                    }
-                    //byteOutStream.write(recievedImage, bytePosition, bytesRead);
+                    //Copy whatever we just read into bitmapArray at position bytePosition
                     System.arraycopy(recievedImage,0,bitmapArray,bytePosition,bytesRead);
+                    //Update bytePosition
                     bytePosition+= bytesRead;
-                    Log.d("mybug", "byte position " + bytePosition);
-                    Log.d("mybug", "read bytes " + bytesRead);
-                    Log.d("mybug", "element at bytes read " + recievedImage[bytesRead -1]);
-                    Log.d("mybug", "element at bytePosition " + recievedImage[bytePosition - 1]);
-                    Log.d("mybug", "last element of array " + recievedImage[imageSize -1]);
+                    //Check if we've read the entire image
                     if (bytePosition == imageSize){
                         Log.d("mybug", "setting bitmapImage");
+                        //Get our bitmap image
                         bitmapImage = BitmapFactory.decodeByteArray(bitmapArray, 0, imageSize);
                         Log.d("mybug", "bitmapImage is set");
                         if (bitmapImage != null) {
                             Log.d("mybug", "BITMAP ISN'T EMPTY");
                         }
+                        //close the socket so our read returns -1
                         closeSocket(socket.getOutputStream());
                         break;
                     }
-                    //bytesRead = imageInputStream.read(recievedImage);
-                    //Log.d("mybug", "read bytes " + bytesRead);
-                    //bytePosition += bytesRead;
-                    //Log.d("mybug", "wrote to receivedImage");
                }
             }
         }
