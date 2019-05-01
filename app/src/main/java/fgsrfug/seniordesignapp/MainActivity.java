@@ -22,8 +22,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -49,11 +52,7 @@ public class MainActivity extends AppCompatActivity {
     public TextView concentration;
     public ImageView image;
     private String reply;
-    static Boolean expectingImage = Boolean.FALSE;
-    private Bitmap bitmapImage;
-    byte[] recievedImage;
     Button button, laserButton, cameraButton;
-    int bytesRead;
     int laserIntensity = 0;
     int cameraExposure = 0;
     String clientMessage = "This is the Client";
@@ -88,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         image = (ImageView) findViewById(R.id.mainImage);
         image.getLayoutParams().height = 640;
         image.getLayoutParams().width = 480;
-        image.setImageResource(R.drawable.squiddab);
+        image.setImageResource(R.drawable.sampleimage);
         //set the buttons to listen to clicks
         //Set this button to initiate the analysis
         button.setOnClickListener(new View.OnClickListener() {
@@ -96,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //Pop up a toast indicating the button has been hit and that a message was sent
                 //ipAddressText = ipAddress.getText().toString();
-                ipAddressText = "192.168.122.1";
+                ipAddressText = "192.168.1.178";
                 Log.d("mybug","button pressed/toast coming");
                 Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
                 Log.d("mybug","going into main()");
@@ -185,7 +184,12 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     String serverMessage = "";
                     int messageCounter = 1;
-                    while (true) {
+                    int imageSize = 0;
+                    Boolean expectingImage = Boolean.FALSE;
+                    Bitmap bitmapImage = null;
+                    Bitmap setBitmap = null;
+                    Boolean continueWhileLoop = true;
+                    while (continueWhileLoop) {
                         Log.d("mybug", "Top of main while loop");
                         if (socket == null) {
                             //Create the socket and set it to only look for the raspberry pi
@@ -200,7 +204,6 @@ public class MainActivity extends AppCompatActivity {
                             case 0:
                                 Log.d("mybug", "No ACK");
                                 sendMessage("No ACK");
-                                messageCounter = 1;
                                 serverMessage = recieveMessage();
                                 break;
                             case 1:
@@ -211,29 +214,47 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                             case 2:
                                 Log.d("mybug", "camera exposure");
-                                sendMessage(Integer.toString(cameraExposure));
+                                sendMessage("Camera exposure " + cameraExposure);
                                 messageCounter = 2;
                                 serverMessage = recieveMessage();
                                 break;
                             case 3:
                                 Log.d("mybug", "laser intensity");
-                                sendMessage(Integer.toString(laserIntensity));
+                                sendMessage("Laser intensity " + laserIntensity);
                                 messageCounter = 3;
                                 serverMessage = recieveMessage();
                                 break;
                             case 4:
                                 Log.d("mybug", "image size");
                                 sendMessage("Send image size");
+                                messageCounter = 4;
                                 serverMessage = recieveMessage();
+                                Log.d("mybug", "got servermessage imagesize");
+                                imageSize = findIntInString(serverMessage);
+                                Log.d("mybug", "got int imagesize as " + imageSize);
                                 break;
                             case 5:
-                                Log.d("mybug", "receiving image");
-                                recieveImage();
-                                break;
+                                Log.d("mybug", "Receiving image attributes");
+                                sendMessage("Send image attributes");
+                                serverMessage = recieveMessage();
+                            case 6:
+                                if(messageCounter == 4) {
+                                    //Log.d("mybug", "Set expectingImage to false, calling closeSocket");
+                                    Log.d("mybug", "Ready for image");
+                                    sendMessage("Ready for image");
+                                    expectingImage = Boolean.TRUE;
+                                    Log.d("mybug", "Expecting image is set to " + expectingImage);
+                                    Log.d("mybug", "imageSize variable is " + imageSize);
+                                    setBitmap = recieveImage(imageSize, expectingImage, bitmapImage);
+                                    expectingImage = Boolean.FALSE;
+                                    continueWhileLoop = false;
+                                    onPostExecute(setBitmap, serverMessage);
+                                    break;
+                                }
+                            default:
+                                closeSocket(socket.getOutputStream());
                         }
                     }
-
-
                 }
 
                 catch (IOException e) {
@@ -250,14 +271,6 @@ public class MainActivity extends AppCompatActivity {
         //Create a new thread to handle the socket connection
             try {
                 Log.d("mybug", "at top of sendMessage's run()");
-
-                /*
-                else {
-                        Log.d("mybug", "no socket created");
-                        Toast.makeText(getApplicationContext(), "No host found", Toast.LENGTH_LONG).show();
-                }
-                */
-
                 //Check that the socket is connected.
                 boolean socketConnect = socket.isConnected();
                 String stringSockConn = String.valueOf(socketConnect);
@@ -286,6 +299,7 @@ public class MainActivity extends AppCompatActivity {
             out.close();
             out.close();
             socket.close();
+            Log.d("mybug", "socket closed!");
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -302,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
 
             case "Message received":
                 //ACK to this is the client
-                Log.d("mybug", "MessageCount" + Integer.toString(messageCount));
+                Log.d("mybug", "MessageCount" + messageCount);
                 Log.d("mybug", "Message received case");
                 if (messageCount == 1) {
                     Log.d("mybug", "first message received");
@@ -325,15 +339,102 @@ public class MainActivity extends AppCompatActivity {
                 catch (IOException e) {
                     e.printStackTrace();
                 }
+
             default:
+                Log.d("mybug", "entering default behavior");
+                if (stringToCheck.contains("Image size")){
+                    Log.d("mybug", "Got the image size");
+                    return 5;
+                }
+                else if (stringToCheck.contains("The concentration")) {
+                    Log.d("mybug", "Got the concentration");
+                    return 6;
+                }
+                try {
+                    closeSocket(socket.getOutputStream());
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
         }
 
-        if (stringToCheck.contains("Image size")){
-            expectingImage = Boolean.TRUE;
-            return 5;
-        }
         return 0;
+    }
+
+    private String recieveMessage(){
+        try {
+            Log.d("mybug", "Inside recieveMessage");
+            //Create a buffer to receive incoming data and read that data into a string
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            Log.d("mybug", "Created buffered reader");
+            stringy = input.readLine();
+            Log.d("mybug", "created input variables/reply is: " + stringy);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+
+        return stringy;
+    }
+
+    private Bitmap recieveImage(int imageSize, boolean expectingImage, Bitmap bitmapImage) {
+        try {
+            if (expectingImage) {
+                Log.d("mybug", "inside recieveImage");
+                InputStream imageInputStream = socket.getInputStream();
+                Log.d("mybug", "imageInputStream declared");
+                ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream(imageSize);
+                byte [] recievedImage = new byte[imageSize];
+                byte [] bitmapArray = new byte[imageSize];
+                int bytePosition = 0;
+                int bytesRead = 0;
+                while ((bytesRead = imageInputStream.read(recievedImage)) != -1) {
+                    if(bytePosition != 0) {
+                        Log.d("mybug", "element at bytePosition before write " + recievedImage[bytePosition - 1]);
+                    }
+                    else {
+                        Log.d("mybug", "element at bytePosition 0 before write " + recievedImage[0]);
+                    }
+                    //byteOutStream.write(recievedImage, bytePosition, bytesRead);
+                    System.arraycopy(recievedImage,0,bitmapArray,bytePosition,bytesRead);
+                    bytePosition+= bytesRead;
+                    Log.d("mybug", "byte position " + bytePosition);
+                    Log.d("mybug", "read bytes " + bytesRead);
+                    Log.d("mybug", "element at bytes read " + recievedImage[bytesRead -1]);
+                    Log.d("mybug", "element at bytePosition " + recievedImage[bytePosition - 1]);
+                    Log.d("mybug", "last element of array " + recievedImage[imageSize -1]);
+                    if (bytePosition == imageSize){
+                        Log.d("mybug", "setting bitmapImage");
+                        bitmapImage = BitmapFactory.decodeByteArray(bitmapArray, 0, imageSize);
+                        Log.d("mybug", "bitmapImage is set");
+                        if (bitmapImage != null) {
+                            Log.d("mybug", "BITMAP ISN'T EMPTY");
+                        }
+                        closeSocket(socket.getOutputStream());
+                        break;
+                    }
+                    //bytesRead = imageInputStream.read(recievedImage);
+                    //Log.d("mybug", "read bytes " + bytesRead);
+                    //bytePosition += bytesRead;
+                    //Log.d("mybug", "wrote to receivedImage");
+               }
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        return bitmapImage;
+    }
+
+    private int findIntInString(final String stringWithInt){
+        Log.d("mybug", "in findIntInString");
+        String tempString = stringWithInt.replaceAll("[^0-9]+", "");
+        Log.d("mybug", "converted string");
+        int intsFromString = Integer.parseInt(tempString);
+        Log.d("mybug", "Returning...");
+        return  intsFromString;
+
     }
 /*
     private void determineMessage(OutputStream out){
@@ -406,66 +507,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 */
-    private void onPostExecute(final Bitmap bitmapImage) {
+
+    private void onPostExecute(final Bitmap bitmapImage, final String Concentration) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                Log.d("mybug", "In onPostExecute");
                 image.setImageBitmap(bitmapImage);
-                serverResponse.setText("Response from Pi:Image Size is " + Integer.toString((bytesRead % 4) + 1));
-                concentration.setText("Image Concentration: Like, really concentrated");
+                //serverResponse.setText("Response from Pi:Image Size is " + bytesRead);
+                concentration.setText(Concentration);
             }
         });
     }
 
-
-    private String recieveMessage(){
-        try {
-            Log.d("mybug", "Inside recieveMessage");
-            //Create a buffer to receive incoming data and read that data into a string
-            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            stringy = input.readLine();
-            Log.d("mybug", "created input variables/reply is: " + stringy);
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-
-        return stringy;
-    }
-
-    private void recieveImage() {
-        try {
-            Log.d("mybug", "inside recieveImage");
-            DataInputStream imageInputStream = new DataInputStream(socket.getInputStream());
-            Log.d("mybug", "imageInputStream declared");
-
-            bytesRead = imageInputStream.read(recievedImage, 0, recievedImage.length);
-            Log.d("mybug", "bytes read set");
-            //int z = 1;
-            //int offset = 0;
-            //while(((bytesRead = imageInputStream.read(recievedImage)) != -1)) {
-                //if(bytesRead < 6209){
-                  //  Log.d("mybug", "read bytes" + Integer.toString(bytesRead));
-                //    continue;
-                //}
-                //else {
-                bitmapImage = BitmapFactory.decodeByteArray(recievedImage, 0, bytesRead);
-                Log.d("mybug", "read bytes " + Integer.toString(bytesRead));
-                    //Log.d("mybug", "num of packets" + Integer.toString(z++));
-                    //  offset =+bytesRead;
-                //}
-            //}
-            Log.d("mybug", "set bitmapImage");
-            if (bitmapImage != null){
-                Log.d("mybug", "BITMAP ISN'T EMPTY");
-            }
-            else{
-                recieveImage();
-            }
-
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-    }
 }

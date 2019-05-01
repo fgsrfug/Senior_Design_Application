@@ -22,7 +22,7 @@
         android:id="@+id/serverResponsetextView"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
-        android:layout_marginBottom="308dp"
+        android:layout_marginBottom="304dp"
         android:text="Image Properties:"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -57,7 +57,7 @@
         app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/squiddab" />
+        app:srcCompat="@drawable/sampleimage" />
 
     <TextView
         android:id="@+id/concentration_value"
