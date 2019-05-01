@@ -1,4 +1,6 @@
+#!/usr/bin/env python2.7
 from PIL import Image 
+import subprocess
 import time
 import string
 import Adafruit_MCP4725
@@ -9,20 +11,16 @@ dac = Adafruit_MCP4725.MCP4725()
 
 #Set the voltage
 def setVoltage(x):
-	if x == 0:
-		dac.set_voltage(3195)#set to 3.9V
-	elif x == 1:
-		dac.set_voltage(3277)#set to 4.0V
-	elif x == 2:	
-		dac.set_voltage(3358)#set to 4.1V
+
+	dac.set_voltage(3195)#set to 3.9V
 
 #Camera takes picture and saves it in piControl
 def takePic():
-	raspistill -ex auto -w 3280 -h 2464 -q 50 -100000 -o /home/pi/piControl/sampleImage.jpg
-		print 'taking picture' 
+	subprocess.call('/camera/./camera.sh', shell=True)
+	print 'taking picture' 
 
 #process image based on laser intensity
-def processImage(z):
+def processImage():
 	global concentration
 	global acceptPic
 
@@ -30,35 +28,35 @@ def processImage(z):
 	img = Image.open('sampleImage.jpg')
 	total = 0
 	
-	for x in range(700,2100):
-		for y in range(800,2000):
+	for x in range(1500,1900):
+		for y in range(1050,14500):
 			pixel = img.getpixel((x,y))			
-			if pixel[1] > 10 and pixel[1] > pixel[2] and pixel[1] > pixel[0]:
+			if pixel[1] > 5 and pixel[1] > pixel[2] and pixel[1] > pixel[0]:
 				total = total + 1
-				break
+				
 	#check if in correct laser range and calculate cam
-	if z == 0 and total < 480 and total > 1018:
-		concentration = 334.945 - 2.58665*total + 0.00706678*total**2 - (7.823577*10**(-6))*total**3 + (3.100589*10**(-9))*total**4 
-		acceptPic = 1
-	elif z == 1 and total > 425 and total < 1372:
-		concentration = -1082.64 + 7.3584*total - 0.0190526*total**2 + (2.38123*10**(-5))*total**3 - (1.43231*10**(-8))*total**4 + (3.3334*10**(-12))*total**5
-		acceptPic = 1
-	elif z == 2 and total > 421 and total < 1368:
-		concentration = -535.69588 + 2.47444*total - (3.452522*10**(-3))*total**2 + (1.41899*10**(-6))*total**3
-		acceptPic = 1
-	
+	if x > 139 and x < 213:
+		con = 0.0694444*x - 9.72222
+	elif x > 211 and x < 248:
+		con = 0.142857*x - 25.2857
+	elif x > 246 and x < 254:
+		con = 1.666667*x - 401.6666
+	elif x > 252 and x < 342:
+		con = 0.22727272*x - 37.5
+	elif x > 340 and x < 411:
+		con = 0.289855*x - 58.84057
+	elif x > 413 and x < 419:
+		con = 2.5*x - 965
 
-for x in range(0,3):
-	setVoltage(x)#turn on laser to set level
-	takePic()
-	processImage(x)
-	if(acceptPic == 1):
-		print str(concentration)
-		break
+	
+setVoltage()#turn on laser to set level
+takePic()
+processImage()
+print str(concentration)
+
 		
 image = Image.open('sampleImage.jpg')
-image = image.crop((700,800,2100))#crop it to important area
-image = image.resize((175,175))#make it 1.4 Kbytes
+image = image.crop((1500,1050,1900,1450))#crop it to important area
 image.save('sampleImage.jpg')#save final image
 
 dac.set_voltage(0)#set to 0V
