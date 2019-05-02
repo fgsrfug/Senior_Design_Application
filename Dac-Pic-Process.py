@@ -16,7 +16,7 @@ def setVoltage(x):
 
 #Camera takes picture and saves it in piControl
 def takePic():
-	subprocess.call('/camera/./camera.sh', shell=True)
+	subprocess.call('./camera.sh', shell=True)
 	print 'taking picture' 
 
 #process image based on laser intensity
