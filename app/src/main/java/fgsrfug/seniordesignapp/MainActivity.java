@@ -48,13 +48,14 @@ public class MainActivity extends AppCompatActivity {
     //Define variables to be used in communication
     //private EditText ipAddress;
     String ipAddressText;
-    public TextView serverResponse;
+    public TextView imageSizeText;
     public TextView concentration;
     public ImageView image;
     private String reply;
     Button button, laserButton, cameraButton;
     int laserIntensity = 0;
     int cameraExposure = 0;
+    Boolean continueWhileLoop = true;
     String clientMessage = "This is the Client";
     Socket socket = null;
     String path = "/storage/emulated/0/Download/squiddab.png";
@@ -79,9 +80,9 @@ public class MainActivity extends AppCompatActivity {
         //checkPermission();
         //Map "Begin Analysis" button
         button = (Button) findViewById(R.id.nutButton);
-        laserButton = findViewById(R.id.laserButton);
-        cameraButton = findViewById(R.id.cameraButton);
-        serverResponse = (TextView) findViewById(R.id.serverResponsetextView);
+        //laserButton = findViewById(R.id.laserButton);
+        //cameraButton = findViewById(R.id.cameraButton);
+        imageSizeText = (TextView) findViewById(R.id.imageSize);
         concentration = findViewById(R.id.concentration_value);
         //ipAddress = (EditText) findViewById(R.id.ipAddressInput);
         image = (ImageView) findViewById(R.id.mainImage);
@@ -95,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //Pop up a toast indicating the button has been hit and that a message was sent
                 //ipAddressText = ipAddress.getText().toString();
-                ipAddressText = "192.168.1.178";
+                ipAddressText = "192.168.4.1";
                 Log.d("mybug","button pressed/toast coming");
                 Toast.makeText(getApplicationContext(), "Analysis initiated", Toast.LENGTH_LONG).show();
                 Log.d("mybug","going into main()");
@@ -105,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         });
         Log.d("mybug", "outside button's click listener");
         //Increment laser intensity by 1 on every press
+        /*
         laserButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v){
@@ -130,8 +132,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Adjusted camera exposure to " + Integer.toString(cameraExposure), Toast.LENGTH_LONG).show();
             }
         });
-
-        serverResponse.setText("Press one of the buttons below to begin.");
+        */
+        imageSizeText.setText("Press one of the buttons below to begin.");
         concentration.setText("Data will appear here once analysis is done.");
         //Log.d("mybug", "file exists");
         //Bitmap myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
@@ -182,81 +184,82 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    String serverMessage = "";
-                    int messageCounter = 1;
-                    int imageSize = 0;
-                    Boolean expectingImage = Boolean.FALSE;
-                    Bitmap bitmapImage = null;
-                    Bitmap setBitmap = null;
-                    Boolean continueWhileLoop = true;
-                    while (continueWhileLoop) {
-                        Log.d("mybug", "Top of main while loop");
-                        if (socket == null) {
-                            //Create the socket and set it to only look for the raspberry pi
-                            // Log.d("mybug", "creating socket");
-                            socket = new Socket(ipAddressText, 9090);
-                            Log.d("mybug", "socket created");
-                        }
+                    while (true) {
+                        String serverMessage = "";
+                        int messageCounter = 1;
+                        int imageSize = 0;
+                        Boolean expectingImage = Boolean.FALSE;
+                        socket = null;
+                        Bitmap bitmapImage = null;
+                        Bitmap setBitmap = null;
+                        while (continueWhileLoop) {
+                            Log.d("mybug", "Top of main while loop");
+                            if (socket == null) {
+                                //Create the socket and set it to only look for the raspberry pi
+                                // Log.d("mybug", "creating socket");
+                                socket = new Socket(ipAddressText, 9090);
+                                Log.d("mybug", "socket created");
+                            }
 
-                        Log.d("mybug", "Server message is: " + serverMessage);
+                            Log.d("mybug", "Server message is: " + serverMessage);
 
-                        switch (stringSearch(serverMessage, messageCounter)) {
-                            case 0:
-                                Log.d("mybug", "No ACK");
-                                sendMessage("No ACK");
-                                serverMessage = recieveMessage();
-                                break;
-                            case 1:
-                                Log.d("mybug", "This is the Client");
-                                sendMessage(clientMessage);
-                                messageCounter = 1;
-                                serverMessage = recieveMessage();
-                                break;
-                            case 2:
-                                Log.d("mybug", "camera exposure");
-                                sendMessage("Camera exposure " + cameraExposure);
-                                messageCounter = 2;
-                                serverMessage = recieveMessage();
-                                break;
-                            case 3:
-                                Log.d("mybug", "laser intensity");
-                                sendMessage("Laser intensity " + laserIntensity);
-                                messageCounter = 3;
-                                serverMessage = recieveMessage();
-                                break;
-                            case 4:
-                                Log.d("mybug", "image size");
-                                sendMessage("Send image size");
-                                messageCounter = 4;
-                                serverMessage = recieveMessage();
-                                Log.d("mybug", "got servermessage imagesize");
-                                imageSize = findIntInString(serverMessage);
-                                Log.d("mybug", "got int imagesize as " + imageSize);
-                                break;
-                            case 5:
-                                Log.d("mybug", "Receiving image attributes");
-                                sendMessage("Send image attributes");
-                                serverMessage = recieveMessage();
-                            case 6:
-                                if(messageCounter == 4) {
-                                    //Log.d("mybug", "Set expectingImage to false, calling closeSocket");
-                                    Log.d("mybug", "Ready for image");
-                                    sendMessage("Ready for image");
-                                    expectingImage = Boolean.TRUE;
-                                    Log.d("mybug", "Expecting image is set to " + expectingImage);
-                                    Log.d("mybug", "imageSize variable is " + imageSize);
-                                    setBitmap = recieveImage(imageSize, expectingImage, bitmapImage);
-                                    expectingImage = Boolean.FALSE;
-                                    continueWhileLoop = false;
-                                    onPostExecute(setBitmap, serverMessage);
+                            switch (stringSearch(serverMessage, messageCounter)) {
+                                case 0:
+                                    Log.d("mybug", "No ACK");
+                                    sendMessage("No ACK");
+                                    serverMessage = recieveMessage();
                                     break;
-                                }
-                            default:
-                                closeSocket(socket.getOutputStream());
+                                case 1:
+                                    Log.d("mybug", "This is the Client");
+                                    sendMessage(clientMessage);
+                                    messageCounter = 1;
+                                    serverMessage = recieveMessage();
+                                    break;
+                                case 2:
+                                    Log.d("mybug", "camera exposure");
+                                    sendMessage("Camera exposure " + cameraExposure);
+                                    messageCounter = 2;
+                                    serverMessage = recieveMessage();
+                                    break;
+                                case 3:
+                                    Log.d("mybug", "laser intensity");
+                                    sendMessage("Laser intensity " + laserIntensity);
+                                    messageCounter = 3;
+                                    serverMessage = recieveMessage();
+                                    break;
+                                case 4:
+                                    Log.d("mybug", "image size");
+                                    sendMessage("Send image size");
+                                    messageCounter = 4;
+                                    serverMessage = recieveMessage();
+                                    Log.d("mybug", "got servermessage imagesize");
+                                    imageSize = findIntInString(serverMessage);
+                                    Log.d("mybug", "got int imagesize as " + imageSize);
+                                    break;
+                                case 5:
+                                    Log.d("mybug", "Receiving image attributes");
+                                    sendMessage("Send image attributes");
+                                    serverMessage = recieveMessage();
+                                case 6:
+                                    if (messageCounter == 4) {
+                                        //Log.d("mybug", "Set expectingImage to false, calling closeSocket");
+                                        Log.d("mybug", "Ready for image");
+                                        sendMessage("Ready for image");
+                                        expectingImage = Boolean.TRUE;
+                                        Log.d("mybug", "Expecting image is set to " + expectingImage);
+                                        Log.d("mybug", "imageSize variable is " + imageSize);
+                                        setBitmap = recieveImage(imageSize, expectingImage, bitmapImage);
+                                        expectingImage = Boolean.FALSE;
+                                        continueWhileLoop = false;
+                                        onPostExecute(setBitmap, serverMessage, imageSize);
+                                        break;
+                                    }
+                                default:
+                                    closeSocket(socket.getOutputStream());
+                            }
                         }
                     }
                 }
-
                 catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -296,7 +299,6 @@ public class MainActivity extends AppCompatActivity {
     //Close the socket
     private void closeSocket(OutputStream out) {
         try {
-            out.close();
             out.close();
             socket.close();
             Log.d("mybug", "socket closed!");
@@ -428,88 +430,17 @@ public class MainActivity extends AppCompatActivity {
         return  intsFromString;
 
     }
-/*
-    private void determineMessage(OutputStream out){
-        //String imageSize = recieveMessage();
-        //Log.d("mybug","imageSize value" + imageSize);
-        Log.d("mybug", "message has been sent, inside determineMessage");
-        if (expectingImage == Boolean.TRUE) {
-            Log.d("mybug", "calling recieveImage");
-            recieveImage();
-        }
-        //Assign reply to return value of recieveMessage
-        else {
-            reply = recieveMessage();
-            Log.d("mybug", "reply is: " + reply);
-            //Close socket if server sends close
-            if(reply.equals("'close'")){
-                Log.d("mybug", "about to close socket");
-                closeSocket(out);
-            }
-        }
 
-        //Check if we're expecting an image
-        if (handleMessage(expectingImage, reply, bitmapImage)){
-            //If so, send
-            sendMessage("Message recieved");
-        }
-        else{
-            recieveImage();
-        }
-
-        Log.d("mybug", "stuff closed");
-        Log.d("mybug", "end of try block");
-    }
-
-    //Handles data recieved and places it on the screen
-    private boolean handleMessage(Boolean expectingImage, final String reply, final Bitmap bitmapImage){
-        Log.d("mybug", "top of handleMessage");
-        if (expectingImage == Boolean.FALSE){
-            Log.d("mybug", "handling string");
-            //Call UIThread to change viewText on main screen
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    serverResponse.setText("Response from Pi: " + reply);
-                    concentration.setText("Image Concentration: super " + reply );
-                    Log.d("mybug", "set serverResponse");
-                }
-            });
-            expectingImage = Boolean.TRUE;
-            return expectingImage;
-
-        }
-
-        else {
-            Log.d("mybug", "handling image");
-            //runOnUiThread(new Runnable() {
-            //    @Override
-            //    public void run() {
-            //    Log.d("mybug", "about to set image");
-            //    image.setImageBitmap(bitmapImage);
-            onPostExecute(bitmapImage);
-            expectingImage = Boolean.FALSE;
-            clientMessage = "Got image";
-            return expectingImage;
-            //    Log.d("mybug", "image handled");
-            //    }
-            //});
-
-        }
-
-    }
-*/
-
-    private void onPostExecute(final Bitmap bitmapImage, final String Concentration) {
+    private void onPostExecute(final Bitmap bitmapImage, final String Concentration, final int imageSize) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 Log.d("mybug", "In onPostExecute");
+                String imageSizeString = String.format("Image size is %d bytes", imageSize);
                 image.setImageBitmap(bitmapImage);
-                //serverResponse.setText("Response from Pi:Image Size is " + bytesRead);
+                imageSizeText.setText(imageSizeString);
                 concentration.setText(Concentration);
             }
         });
     }
-
 }
