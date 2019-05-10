@@ -9,4 +9,5 @@ DATE=$(date +"%Y-%m-%d_%H%M")
 #Quality of image (q) = 50 (The lower the number, the more compressed the image is)
 #Preview (t) = .5 second preview before image is taken
 #Sharpness (sh) = Sharpest image can be
-raspistill -ex verylong -w 640 -h 480 -q 50 -t 500 -sh 100 -o /home/pi/piControl/sampleImage.jpg
+raspistill -ex auto -w 640 -h 480 -q 50 -e png -t 5000 -awb fluorescent -ISO 700 -ss 160000 -o /home/pi/piControl/sampleImage.png
+                                                           
